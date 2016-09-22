@@ -9,8 +9,8 @@ Represent SPARQL query as a map:
 ```clj
 
 (def query '{:select [?s ?p ?o :distinct] 
-                    :where [[?s ?p ?o]]
-                    :limit 100})
+             :where [[?s ?p ?o]]
+             :limit 100})
 ```
 
 Call `build-query` method to get SPARQL query string:
@@ -28,15 +28,15 @@ More complex example:
 
 (def complex-query 
                    '{:prefix {:owl "<http://www.w3.org/2002/07/owl#>"
-                                  :rdfs "<http://www.w3.org/2000/01/rdf-schema#>"
-                                  :rdf "<http://www.w3.org/1999/02/22-rdf-syntax-ns#>"}
+                              :rdfs "<http://www.w3.org/2000/01/rdf-schema#>"
+                              :rdf "<http://www.w3.org/1999/02/22-rdf-syntax-ns#>"}
                      :select [?s :distinct]
                      :where [[?s :rdf/type :owl/Thing]
-                                    {:union
-                                     [[?s ?a ?b]
-                                      {:select [* :distinct]
-                                       :where [["<http:example.com>" ?p ?s]
-                                                     [?s  :rdf/type  :owl/Thing]]}]}]
+                             {:union
+                             [[?s ?a ?b]
+                              {:select [* :distinct]
+                               :where [["<http:example.com>" ?p ?s]
+                                       [?s  :rdf/type  :owl/Thing]]}]}]
                      :limit 100
                      :offset 100})
                     

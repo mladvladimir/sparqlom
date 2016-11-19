@@ -1,5 +1,5 @@
 (ns sparqlom.core
-  (:require [sparqlom.query :refer [build-query-element]]
+  (:require [sparqlom.helper :refer [build-query-element]]
             [sparqlom.spec :refer [parse-query]]
             [clojure.string :refer [join]]))
 
@@ -8,7 +8,7 @@
 
 
 
-(defn build-query
+(defn ->sparql
   [q]
   (->>(parse-query q)
       (map build-query-element)

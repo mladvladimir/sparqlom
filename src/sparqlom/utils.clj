@@ -1,4 +1,5 @@
-(ns sparqlom.utils)
+(ns sparqlom.utils
+  (:require [clojure.string :refer [split join]]))
 
 
 (defn is-prefixed?
@@ -15,3 +16,7 @@
 ;(defn build-iri
 ;  [prefixed-name]
 ;  (namespace prefixed-name))
+
+(defn remove-whitespace
+  [words]
+  (join "" (split words #"\s+")))

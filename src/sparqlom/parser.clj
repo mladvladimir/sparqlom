@@ -1,16 +1,67 @@
 (ns sparqlom.parser
-  (:require [instaparse.core :as insta]))
+  (:require [instaparse.core :as insta]
+            [sparqlom.utils :refer [remove-whitespace]]))
+
+
+(def grammar "./resources/sparql.ebnf")
+
+;Parsers
+(def sparql-parser
+  (insta/parser grammar))
+
+(defn partial-parser
+  [s tag]
+  (insta/parse
+    sparql-parser
+    (remove-whitespace s)
+    :start tag
+    ))
+
+(defn parse-prologue
+  [s]
+  (partial-parser s :Prologue))
+
+(defn parse-select
+  [s]
+  (partial-parser s :SelectClause))
+
+(defn parse-limit-offset
+  [s]
+  (partial-parser s :LimitOffsetClauses))
+
+(defn parse-triple
+  [s]
+  (partial-parser s :TriplesBlock))
 
 
 
 
-(def sparql-parser (insta/parser "./resources/sparql.ebnf" ))
 
+
+
+;SPARQL string parser
+(defn parse-element
+  [s tag]
+  (sparql-parser
+    (remove-whitespace s)
+    :start tag))
+
+;SPARQL string validator
 (defn insta-validate
-  [element tag]
-  (->(sparql-parser element :start tag)
+  [s tag]
+  (->(parse-element s tag)
      (insta/failure?)
      (not)))
+
+
+
+(defn prologue-valid?
+  [prolog]
+  (insta-validate prolog :Prologue))
+
+(defn prefix-declaradion-valid?
+  [prefix-decl]
+  (insta-validate prefix-decl :PrefixDecl))
 
 (defn prefix-valid?
   [prefix]
@@ -19,9 +70,17 @@
 
 (defn var-name-valid?
   [var-name]
-  (insta-validate var-name :VAR1))
+  (insta-validate var-name :Var))
 
 
 (defn iri-valid?
   [iri]
   (insta-validate iri :IRIREF))
+
+(defn rdf-literal-valid?
+  [rdf-literal]
+  (insta-validate rdf-literal :RDFLiteral))
+
+(defn select-valid?
+  [clause]
+  (insta-validate clause :SelectClause))

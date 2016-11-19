@@ -2,9 +2,8 @@
   (:require [clojure.string :as str]
             [clojure.spec :as s]
             [clojure.spec.gen :as gen]
-            [sparqlom.parser :refer [var-name-valid?
-                                     iri-valid?
-                                     prefix-valid?]]))
+            [sparqlom.parser :refer :all]
+            [sparqlom.utils :refer :all]))
 
 
 ;namespaces
@@ -76,6 +75,7 @@
                                      :group-graph-pattern-sub ::group-graph-pattern-sub
                                      :subselect ::query
                                      :union-graph-pattern ::union-graph-pattern
+                                     :filter-expression ::filter-expression
                                      )))
 
 ;union
@@ -84,9 +84,89 @@
 
 (s/def ::union-graph-pattern (s/keys :req-un [::union]))
 
-(s/def ::where-type ::group-graph-pattern)
+
+
+(s/def ::filter-expression (s/keys :req-un [::filter]))
+
 
 (s/def ::where ::group-graph-pattern)
+
+
+
+;Literals
+
+
+;filter
+;Constraint	  ::=  	BrackettedExpression | BuiltInCall | FunctionCall
+
+
+
+(def relational-operators '#{= != < > <= >= in not-in})
+(def additive-operators '#{+ -})
+(def multiplicative-operators '#{* /})
+(def unary-operators '#{! + -} )
+
+(s/def ::primary-expression
+  (s/or
+        :bracketted-expression ::bracketted-expression
+        ;:builtin-call ::builtin-call
+        ;:iri-or-function ::iri-or-function
+        :rdf-literal #(rdf-literal-valid? (str %))
+        :numeric-literal number?
+        :boolean-literal boolean?
+        :var ::var
+        ))
+
+(s/def ::unary-expression
+  (s/cat
+    :operator unary-operators
+    :operands ::primary-expression))
+
+(s/def ::multiplicative-expression
+  (s/cat
+    :operator multiplicative-operators
+    :operands (s/+ ::primary-expression)))
+
+(s/def ::additive-expression
+  (s/cat
+    :operator additive-operators
+    :operands (s/+ ::primary-expression)))
+
+
+(s/def ::relational-expression
+  (s/cat
+    :operator relational-operators
+    :operands (s/&
+                (s/+ ::primary-expression)
+                #(-> % count (= 2)))))
+
+
+(s/def ::and-expression
+  (s/cat
+    :operator '#{and}
+    :operands (s/+ ::primary-expression)))
+
+(s/def ::or-expression
+  (s/cat
+    :operator '#{or}
+    :operands (s/+ ::primary-expression)))
+
+
+(s/def ::bracketted-expression
+  (s/or
+    :or-expression ::or-expression
+    :and-expression ::and-expression
+    :relational-expression ::relational-expression
+    :additive-expression ::additive-expression
+    :multiplicative-expression ::multiplicative-expression
+    :unary-expression ::unary-expression))
+
+
+(s/def ::constraint  ::bracketted-expression)
+
+(s/def ::filter ::constraint)
+
+
 
 
 ;modifiers
@@ -116,8 +196,22 @@
 
 (defn parse-query
   [q]
-  (s/conform ::query q))
+  (let [parsed-query (s/conform ::query q)]
+    (if (s/invalid? parsed-query)
+      (throw
+        (ex-info "Invalid query format" (s/explain ::query q)))
+      parsed-query)))
 
+
+
+;
+;(s/fdef defselect
+;        :args ::select)
+
+;(defn parse-filter
+;  [filter-expression]
+;  (let [filter (s/conform ::constraint filter-expression)]
+;    (if s/invalid?)))
 
 
 

@@ -13,6 +13,10 @@
   (->(parse-prologue s)
      (build-query-map)))
 
+(defn ->prefix-sparql
+  [sparqlom]
+  (->(build-query-element)))
+
 (defn ->select-map
   [s]
   (->(parse-select s)

@@ -75,6 +75,7 @@
                                      :group-graph-pattern-sub ::group-graph-pattern-sub
                                      :subselect ::query
                                      :union-graph-pattern ::union-graph-pattern
+                                     :optional-graph-pattern ::optional-graph-pattern
                                      :filter-expression ::filter-expression
                                      )))
 
@@ -84,10 +85,15 @@
 
 (s/def ::union-graph-pattern (s/keys :req-un [::union]))
 
+;optional
+(s/def ::optional ::group-graph-pattern)
+
+(s/def ::optional-graph-pattern (s/keys :req-un [::optional]))
 
 
+
+;filter
 (s/def ::filter-expression (s/keys :req-un [::filter]))
-
 
 (s/def ::where ::group-graph-pattern)
 

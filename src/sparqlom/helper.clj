@@ -32,6 +32,18 @@
 
 (defmulti build-query-element (fn [element] (key element)))
 
+(defn- braces-enclose
+  [element]
+  (str "{"
+       (->>(val element)
+           (map build-query-element)
+           (join " "))
+       "}"))
+
+(defmethod build-query-element :default
+  [element]
+  (val element))
+
 
 (defmethod build-query-element :prefix
   [element]
@@ -51,19 +63,12 @@
                (select-projection parsed-select)])))
 
 
+
 (defmethod build-query-element :where
   [element]
-  (str "WHERE {"
-       (->>(val element)
-           (map build-query-element)
-           (join " "))
-       "}"))
+  (str "WHERE "
+       (braces-enclose element)))
 
-
-;(defmethod build-query-element :triple
-;  [element]
-;  (let [[[_ s][_ p][_ o]] (val element)]
-;    (join " " [ s p o "."])))
 
 (defmethod build-query-element :triple
   [element]
@@ -73,21 +78,21 @@
         (join " "))
     " ."))
 
-(defmethod build-query-element :var
-  [element]
-  (val element))
-
-(defmethod build-query-element :iri
-  [element]
-  (val element))
-
-(defmethod build-query-element :numeric-literal
-  [element]
-  (val element))
-
-(defmethod build-query-element :boolean-literal
-  [element]
-  (val element))
+;(defmethod build-query-element :var
+;  [element]
+;  (val element))
+;
+;(defmethod build-query-element :iri
+;  [element]
+;  (val element))
+;
+;(defmethod build-query-element :numeric-literal
+;  [element]
+;  (val element))
+;
+;(defmethod build-query-element :boolean-literal
+;  [element]
+;  (val element))
 
 (defmethod build-query-element :prefixed-name
   [element]
@@ -98,30 +103,31 @@
 
 (defmethod build-query-element :group-graph-pattern-sub
   [element]
-  (str "{"
-       (->>(val element)
-           (map build-query-element)
-           (join " "))
-       "}"))
+  (braces-enclose element))
 
 
 (defmethod build-query-element :subselect
   [element]
-  (str "{"
-       (->>(val element)
-           (map build-query-element)
-           (join " "))
-       "}"))
+  (braces-enclose element))
 
 (defmethod build-query-element :union-graph-pattern
   [element]
   (->>(val element)
       (:union)
-      ;(map build-query-element)
       (map #(if (= :triple (key %))
              (str "{" (build-query-element %) "}")
              (build-query-element %)))
       (join " UNION ")))
+
+
+
+(defmethod build-query-element :optional-graph-pattern
+  [element]
+  (str "OPTIONAL "
+       (->> (val element)
+            (first)
+            (braces-enclose)
+            )))
 
 
 (defmethod build-query-element :limit
@@ -184,7 +190,10 @@
 
 
 
+
 ;Buillding sparqlom query map from parsed string
+;currently under development
+
 (defmulti build-query-map (fn [s] (nth s 0)))
 
 (defmethod build-query-map :PN_PREFIX

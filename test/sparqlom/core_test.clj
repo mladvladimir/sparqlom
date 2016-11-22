@@ -41,6 +41,19 @@
     (is (= (->sparql query-2) query-2-sparql))))
 
 
+(def query-3 '{:select [?s ?p ?o :distinct]
+               :where [[?s ?p ?o]
+                       {:filter (and
+                                  (>= ?o 100)
+                                  (< ?o 123))}]
+               :limit 100})
+
+(def query-3-sparql "SELECT DISTINCT ?s ?p ?o WHERE {?s ?p ?o . FILTER ((?o >= 100) && (?o < 123))} LIMIT 100")
+
+(deftest test-query-3
+  (testing "test query-2 fail!!!"
+    (is (= (->sparql query-3) query-3-sparql))))
+
 (def union-query '{:prefix {:owl "<http://www.w3.org/2002/07/owl#>"
                             :rdfs "<http://www.w3.org/2000/01/rdf-schema#>"}
                    :select [?A ?B ?C]
@@ -66,10 +79,39 @@
                              {:union
                               [[?s ?a ?b]
                                {:select [* :distinct]
-                                :where [["<http:example.com>" ?p ?s]]}]}]
+                                :where [["<http:example.com>" ?p ?s]
+                                        [?s  :rdf/type  :owl/Thing]
+                                        {:optional [["<http:example.com>" ?b ?s]]}]}]}]
                      :limit 100
                      :offset 100})
 
+
+(def complex-query
+  '{:prefix {:owl "<http://www.w3.org/2002/07/owl#>"
+             :rdfs "<http://www.w3.org/2000/01/rdf-schema#>"
+             :rdf "<http://www.w3.org/1999/02/22-rdf-syntax-ns#>"}
+    :select [?s :distinct]
+    :where [[?s :rdf/type :owl/Thing]
+            {:union
+             [[?s ?a ?b]
+              {:select [* :distinct]
+               :where [["<http:example.com>" ?p ?s]
+                       [?s  :rdf/type  :owl/Thing]]}]}]
+    :limit 100
+    :offset 100})
+
+
+
+(def optional-query '{:select [*]
+                      :where [[?s ?p ?o]
+                              {:optional [[?a ?b ?c]
+                                          [?A ?B ?C]]}]})
+
+(def optional-query-sparql "SELECT  * WHERE {?s ?p ?o . OPTIONAL {?a ?b ?c . ?A ?B ?C .}}")
+
+(deftest test-optional-query
+  (testing "test optional-query fail!!!"
+    (is (= (->sparql optional-query) optional-query-sparql))))
 
 ;defprefix
 ;(defprefix :owl "<http://www.w3.org/2002/07/owl#>"
@@ -77,7 +119,7 @@
 ;           :ex "<http://www.example.com>")
 
 
-(def prefix-string "PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>")
+(def prefix-string "PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>")
 
 (def select-string-1 "SELECT *")
 (def select-string-2 "SELECT DISTINCT * ")

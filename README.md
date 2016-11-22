@@ -39,18 +39,18 @@ More complex example:
                              [[?s ?a ?b]
                               {:select [* :distinct]
                                :where [["<http:example.com>" ?p ?s]
-                                       [?s  :rdf/type  :owl/Thing]]}]}]
+                                       [?s  :rdf/type  :owl/Thing]
+                                       {:optional [["<http:example.com>" ?b ?s]]}]}]}]
                      :limit 100
                      :offset 100})
                     
 (->sparql complex-query)
-=>"PREFIX owl: <http://www.w3.org/2002/07/owl#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> SELECT DISTINCT ?s WHERE {?s rdf:type owl:Thing . {?s ?a ?b .} UNION {SELECT DISTINCT * WHERE {<http:example.com> ?p ?s . ?s rdf:type owl:Thing .}}} LIMIT 100 OFFSET 100"
+=>"PREFIX owl: <http://www.w3.org/2002/07/owl#> PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#> PREFIX rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> SELECT DISTINCT ?s WHERE {?s rdf:type owl:Thing . {?s ?a ?b .} UNION {SELECT DISTINCT * WHERE {<http:example.com> ?p ?s . ?s rdf:type owl:Thing . OPTIONAL {<http:example.com> ?b ?s .}}}} LIMIT 100 OFFSET 100"
 ```
 
 
 ## TODO
  
-- OPTIONAL
 - FILTER functions
 - SELECT expressions
 - CONDTRUCT, ASK

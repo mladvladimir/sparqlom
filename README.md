@@ -2,6 +2,10 @@
 
 SPARQLom is SPARQL query builder and DSL for clojure based on clojure.spec and instaparse. It's in early development phase.
 
+## Install
+
+[![Clojars Project](https://img.shields.io/clojars/v/sparqlom.svg)](https://clojars.org/sparqlom)
+
 ## Usage
 
 Represent SPARQL query as a map: 

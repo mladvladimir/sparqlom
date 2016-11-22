@@ -2,9 +2,6 @@
   (:require [clojure.test :refer :all]
             [sparqlom.core :refer :all]))
 
-;(deftest a-test
-;  (testing "FIXME, I fail."
-;    (is (= 0 1))))
 
 
 (def query-1 '{:select [* :distinct]

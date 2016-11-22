@@ -120,7 +120,6 @@
       (join " UNION ")))
 
 
-
 (defmethod build-query-element :optional-graph-pattern
   [element]
   (str "OPTIONAL "

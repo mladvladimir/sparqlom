@@ -1,7 +1,7 @@
 (ns sparqlom.spec
   (:require [clojure.string :as str]
-            [clojure.spec :as s]
-            [clojure.spec.gen :as gen]
+            [clojure.spec.alpha :as s]
+            [clojure.spec.gen.alpha :as gen]
             [sparqlom.parser :refer :all]
             [sparqlom.utils :refer :all]))
 

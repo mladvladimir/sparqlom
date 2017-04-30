@@ -1,8 +1,7 @@
 (ns sparqlom.query
   (:require [sparqlom.spec :as ss]
-            [clojure.spec :as s]
-            ;[clojure.spec.test :as test]
-            ;[clojure.spec.test :as stest]
+            [clojure.spec.alpha :as s]
+            ;[clojure.spec.test.alpha :as test]
             [sparqlom.helper :refer :all]
             [sparqlom.utils :refer :all]
             [sparqlom.parser :refer :all]))

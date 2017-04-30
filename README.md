@@ -1,6 +1,6 @@
 # SPARQLom
 
-SPARQLom is SPARQL query builder and DSL for clojure based on clojure.spec and instaparse. It's in early development phase.
+SPARQLom is SPARQL query builder and DSL for clojure based on clojure.spec.alpha and instaparse. It's in early development phase.
 
 ## Install
 

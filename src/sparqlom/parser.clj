@@ -3,11 +3,11 @@
             [sparqlom.utils :refer [remove-whitespace]]))
 
 
-(def grammar "./resources/sparql.ebnf")
+(def grammar "sparql.ebnf")
 
 ;Parsers
 (def sparql-parser
-  (insta/parser grammar))
+  (insta/parser (clojure.java.io/resource grammar)))
 
 (defn partial-parser
   [s tag]

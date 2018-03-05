@@ -24,7 +24,7 @@ Call `->sparql` method to get SPARQL query string:
 
 ```clj
 
-(require [sparqlom.core :refer [->sparql]])
+(require '[sparqlom.core :refer [->sparql]])
 (->sparql query)
 => "SELECT DISTINCT ?s ?p ?o WHERE {?s ?p ?o . FILTER ((?o >= 100) && (?o < 123))} LIMIT 100"
 ```
@@ -56,8 +56,7 @@ More complex example:
 ## TODO
  
 - FILTER functions
-- SELECT expressions
-- CONDTRUCT, ASK
+- CONSTRUCT, ASK
 - property paths 
 - more query validations
 - transformation from SPARQL to SPARQLom map

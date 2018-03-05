@@ -1,7 +1,8 @@
 (ns sparqlom.core
-  (:require [sparqlom.helper :refer [build-query-element]]
+  (:require [sparqlom.builder :refer [build-query-element]]
             [sparqlom.spec :refer [parse-query]]
-            [clojure.string :refer [join]]))
+            [clojure.string :as str]
+            [sparqlom.utils :as util]))
 
 
 
@@ -10,9 +11,9 @@
 
 (defn ->sparql
   [q]
-  (->>(parse-query q)
-      (map build-query-element)
-      (join " ")))
-
+  (->> (parse-query q)
+       (map build-query-element)
+       (str/join " ")
+       (util/normalize-whitespaces)))
 
 

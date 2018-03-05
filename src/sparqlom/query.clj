@@ -2,7 +2,7 @@
   (:require [sparqlom.spec :as ss]
             [clojure.spec.alpha :as s]
             ;[clojure.spec.test.alpha :as test]
-            [sparqlom.helper :refer :all]
+            [sparqlom.builder :refer :all]
             [sparqlom.utils :refer :all]
             [sparqlom.parser :refer :all]))
 
@@ -41,8 +41,6 @@
 
 ;(defn defselect
 ;  [& [vars distinct-or-reduced ]])
-
-;(defn deftriple
 
 ;(defn defselect
 ;  [clause]

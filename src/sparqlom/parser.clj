@@ -14,8 +14,7 @@
   (insta/parse
     sparql-parser
     (remove-whitespace s)
-    :start tag
-    ))
+    :start tag))
 
 (defn parse-prologue
   [s]
@@ -73,9 +72,9 @@
   (insta-validate var-name :Var))
 
 
-(defn iri-valid?
-  [iri]
-  (insta-validate iri :IRIREF))
+(defn iriref-valid?
+  [iri-string]
+  (insta-validate iri-string :IRIREF))
 
 (defn rdf-literal-valid?
   [rdf-literal]

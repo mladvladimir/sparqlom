@@ -1,67 +1,61 @@
 (ns sparqlom.spec
-  (:require [clojure.string :as str]
-            [clojure.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [clojure.spec.gen.alpha :as gen]
-            [sparqlom.parser :refer :all]
+            [sparqlom.parser :as parser]
             [sparqlom.utils :refer :all]))
 
 
 ;namespaces
 (s/def ::pn-prefix (s/and keyword?
-                       #(prefix-valid? (name %))))
+                       #(parser/prefix-valid? (name %))))
 
 (s/def ::prefix (s/map-of ::pn-prefix ::iri))
 
-(s/def ::prefixed-name (s/and keyword?
-                              #(not (nil? (namespace %)))))
+(s/def ::prefixed-name (s/and string?
+                              #(parser/insta-validate % :PrefixedName)))
 
 
 ;vars
 (s/def ::var (s/and symbol?
-                    #(var-name-valid? (str %))))
-
-(s/def ::vars (s/+ ::var))
-
-(s/def ::star (s/and symbol?
-                     #(= '* %)))
-
-;(s/def ::vars (s/coll-of ::var :kind vector? :min-count 1 ) )
-;(s/def ::var-or-expression )
-
-(s/def ::vars-or-star (s/alt :vars ::vars
-                             :star ::star))
+                    #(parser/var-name-valid? (str %))))
 
 
-;IRI
-(s/def ::iri #(iri-valid? (str %)))
+(s/def ::star (s/or :symbol  #(= '* %)
+                    :keyword #(= :* %)))
 
+
+(s/def ::as ::var)
+
+;iri
+(s/def ::IRIREF (s/and string?
+                       #(parser/iriref-valid? %)))
+
+(s/def ::iri (s/or :IRIREF ::IRIREF
+                   :prefixed-name ::prefixed-name
+                   :qualified-prefixed-name qualified-keyword?))
 
 ;select
+;SelectClause	  ::=  	'SELECT' ( 'DISTINCT' | 'REDUCED' )? ( ( Var | ( '(' Expression 'AS' Var ')' ) )+ | '*' )
+
 (s/def ::distinct-or-reduced (s/? #{:distinct :reduced}))
 
-(s/def ::select-type (s/cat :vars-or-star ::vars-or-star
-                            :distinct-or-reduced ::distinct-or-reduced ))
+(s/def ::select
+  (s/cat :distinct-or-reduced ::distinct-or-reduced
+         :vars (s/* ::var)
+         :binding-expression (s/* (s/keys :req-un [::expression ::as]))
+         :star (s/? ::star)))
 
-
-(s/def ::select ::select-type)
 
 
 ;triples
 (s/def ::subject (s/or :var ::var
-                       :prefixed-name ::prefixed-name
                        :iri ::iri))
 
 (s/def ::predicate (s/or :var ::var
-                         :prefixed-name ::prefixed-name
                          :iri ::iri))
 
 (s/def ::object (s/or :var ::var
-                      :prefixed-name ::prefixed-name
                       :iri ::iri))
-
-;(s/def ::triple (s/cat :subject ::subject
-;                       :predicate ::predicate
-;                       :object ::object))
 
 (s/def ::triple (s/tuple ::subject ::predicate ::object))
 
@@ -77,6 +71,7 @@
                                      :union-graph-pattern ::union-graph-pattern
                                      :optional-graph-pattern ::optional-graph-pattern
                                      :filter-expression ::filter-expression
+                                     :filter ::filter
                                      )))
 
 ;union
@@ -99,105 +94,216 @@
 
 
 
+;Aggregate
+;Aggregate	  ::=  	  'COUNT' '(' 'DISTINCT'? ( '*' | Expression ) ')'
+;    | 'SUM' '(' 'DISTINCT'? Expression ')'
+;    | 'MIN' '(' 'DISTINCT'? Expression ')'
+;    | 'MAX' '(' 'DISTINCT'? Expression ')'
+;    | 'AVG' '(' 'DISTINCT'? Expression ')'
+;    | 'SAMPLE' '(' 'DISTINCT'? Expression ')'
+;    | 'GROUP_CONCAT' '(' 'DISTINCT'? Expression ( ';' 'SEPARATOR' '=' String )? ')'
+
+(def aggregate-functions '#{count sum min max avg sample group-concat})
+(s/def ::aggregate (s/cat :name aggregate-functions
+                          :expression ::expression
+                          :is-distinct (s/? #{:distinct})))
+
+
+
 ;Literals
 
-
 ;filter
-;Constraint	  ::=  	BrackettedExpression | BuiltInCall | FunctionCall
+
+;ArgList	  ::=  	NIL | '(' 'DISTINCT'? Expression ( ',' Expression )* ')'
 
 
+
+;Expressions
+
+
+
+(s/def ::arg-list (s/or :nil nil?
+                        :modifier (s/? #{:distinct})
+                        :expression (s/* ::expression)
+                        ))
+
+(s/def ::iri-or-function (s/or :iri  ::iri
+                               :arg-list (s/? ::arg-list)))
+
+(s/def ::builtin-call ::aggregate)
 
 (def relational-operators '#{= != < > <= >= in not-in})
 (def additive-operators '#{+ -})
 (def multiplicative-operators '#{* /})
 (def unary-operators '#{! + -} )
 
-(s/def ::primary-expression
-  (s/or
-        :bracketted-expression ::bracketted-expression
-        ;:builtin-call ::builtin-call
-        ;:iri-or-function ::iri-or-function
-        :rdf-literal #(rdf-literal-valid? (str %))
-        :numeric-literal number?
-        :boolean-literal boolean?
-        :var ::var
-        ))
-
 (s/def ::unary-expression
-  (s/cat
-    :operator unary-operators
-    :operands ::primary-expression))
+  (s/or :unary-expression
+        (s/cat :operator  unary-operators
+               :operands  ::primary-expression)
+        :primary-expression ::primary-expression))
 
 (s/def ::multiplicative-expression
-  (s/cat
-    :operator multiplicative-operators
-    :operands (s/+ ::primary-expression)))
+  (s/or :multiplicative-expression
+        (s/cat :operator  multiplicative-operators
+               :operands   (s/+ (s/and ::unary-expression
+                                       #(>= (count %) 2))))
+        :unary-expression ::unary-expression))
+
 
 (s/def ::additive-expression
-  (s/cat
-    :operator additive-operators
-    :operands (s/+ ::primary-expression)))
+  (s/or :additive-expression
+        (s/cat :operator  additive-operators
+               :operands (s/+ ::multiplicative-expression))
+        :multiplicative-expression ::multiplicative-expression))
 
+
+(s/def ::numeric-expression ::additive-expression)
 
 (s/def ::relational-expression
-  (s/cat
-    :operator relational-operators
-    :operands (s/&
-                (s/+ ::primary-expression)
-                #(-> % count (= 2)))))
+  (s/or :relational-expression
+        (s/cat :operator relational-operators
+               :operands (s/+ (s/and ::numeric-expression
+                                     #(>= (count %) 2))))
+        :numeric-expression ::numeric-expression))
 
 
-(s/def ::and-expression
-  (s/cat
-    :operator '#{and}
-    :operands (s/+ ::primary-expression)))
+(s/def ::value-logical ::relational-expression)
 
-(s/def ::or-expression
-  (s/cat
-    :operator '#{or}
-    :operands (s/+ ::primary-expression)))
+(s/def ::conditional-and-expression
+  (s/or :conditional-and-expression
+        (s/cat :operator '#{and}
+               :operands (s/+ ::value-logical))
+        :value-logical ::value-logical))
 
+(s/def ::conditional-or-expression
+  (s/or :conditional-or-expression
+        (s/cat :operator '#{or}
+               :operands (s/+ ::conditional-and-expression))
+        :conditional-and-expression ::conditional-and-expression))
 
-(s/def ::bracketted-expression
-  (s/or
-    :or-expression ::or-expression
-    :and-expression ::and-expression
-    :relational-expression ::relational-expression
-    :additive-expression ::additive-expression
-    :multiplicative-expression ::multiplicative-expression
-    :unary-expression ::unary-expression))
+(s/def ::expression ::conditional-or-expression)
 
 
-(s/def ::constraint  ::bracketted-expression)
+(s/def ::bracketted-expression ::expression)
+
+(s/def ::primary-expression
+  (s/or :numeric-literal number?
+        :boolean-literal boolean?
+        :var ::var
+        :builtin-call ::builtin-call
+        :iri-or-function ::iri-or-function
+        :rdf-literal #(parser/rdf-literal-valid? (str %))
+        :bracketted-expression ::bracketted-expression))
+
+;Constraint	  ::=  	BrackettedExpression | BuiltInCall | FunctionCall
+(s/def ::constraint  (s/or :bracketted-expression ::bracketted-expression
+                           :builtin-call ::builtin-call))
 
 (s/def ::filter ::constraint)
 
 
 
-
 ;modifiers
-;limit
-(s/def ::limit integer?)
-;offset
-(s/def ::offset integer?)
-;orderby
+(s/def ::limit pos-int?)
+(s/def ::offset pos-int?)
 (s/def ::order-modifier #{:asc :desc})
 
 
-(s/def ::orderby (s/*
+(s/def ::order-by (s/*
                    (s/cat :var ::var
                           :order-modifier (s/? ::order-modifier))))
 
 
 ;groupby
-(s/def ::groupby ::vars)
+;GroupCondition	  ::=  	BuiltInCall | FunctionCall | '(' Expression ( 'AS' Var )? ')' | Var
 
-
-;(s/def ::modifiers (s/keys :opt-un [::limit ::offset ::orderby]))
+(s/def ::group-by (s/+ (s/or :builtin-call ::builtin-call
+                             :expression ::expression
+                             :var ::var)))
 
 ;query
 (s/def ::query (s/keys :req-un [::select ::where]
-                       :opt-un [::prefix ::limit ::offset ::orderby]))
+                       :opt-un [::prefix ::limit ::offset ::order-by]))
+
+
+
+;SolutionModifier	  ::=  	GroupClause? HavingClause? OrderClause? LimitOffsetClauses?
+;(s/def ::solution-modifier
+;  (s/cat :group-clause
+;         :order-clause
+;         :limit-offset-clause))
+
+
+
+
+;Construct
+;<GraphTerm>	  ::=  	iri |	RDFLiteral |	NumericLiteral |	BooleanLiteral |	BlankNode |	NIL
+(s/def ::graph-term  (s/or :iri ::iri
+                           :rdf-literal #(parser/rdf-literal-valid? (str %))
+                           :numeric-literal number?
+                           :boolean-literal boolean?
+                           ;:blank-node ::blank-node
+                           :nil nil?))
+
+;<VarOrTerm>	  ::=  	Var | GraphTerm
+(s/def ::var-or-term (s/or :var ::var
+                           :graph-term ::graph-term))
+;VarOrIri	  ::=  	Var | iri
+(s/def ::var-or-iri (s/or :var ::var
+                          :iri ::iri))
+
+;;GraphNode	  ::=  	VarOrTerm |	TriplesNode
+(s/def ::graph-node
+  (s/or :var-or-term ::var-or-term
+        ;:triples-node ::triples-node
+        ))
+
+;Object	  ::=  	GraphNode
+(s/def ::object ::graph-node)
+
+;ObjectList	  ::=  	Object ( ',' Object )*
+(s/def ::object-list (s/+ ::object))
+
+;Verb	  ::=  	VarOrIri | 'a'
+(s/def ::verb (s/or :var-or-iri ::var-or-iri
+                    :a (s/or :symbol  #(= 'a %)
+                             :keyword #(= :a %))))
+
+;PropertyListNotEmpty	  ::=  	Verb ObjectList ( ';' ( Verb ObjectList )? )*
+(s/def ::property-list-not-empty
+  (s/+
+    (s/cat :verb ::verb
+           :object (s/or :object ::object
+                         :object-list ::object-list))))
+
+
+;
+;;TriplesNode	  ::=  	Collection |	BlankNodePropertyList
+;(s/def ::triples-node
+;  (s/or :collection (s/+ ::graph-node)
+;        ;:blank-node-property-list ::blank-node-property-list
+;        ))
+
+;TriplesSameSubject	  ::=  	VarOrTerm PropertyListNotEmpty |	TriplesNode PropertyList
+(s/def ::triples-same-subject
+  (s/cat :var-or-term ::var-or-term
+         :property-list-not-empty ::property-list-not-empty))
+
+;ConstructTriples	  ::=  	TriplesSameSubject ( '.' ConstructTriples? )?
+(s/def ::construct-triples
+  (s/cat :triples-same-subject ::triples-same-subject
+         :construct-triples (s/? ::construct-triples)))
+
+;ConstructTemplate	  ::=  	'{' ConstructTriples? '}'
+(s/def ::construct-template (s/? ::construct-triples))
+(s/def ::construct ::construct-template)
+
+;ConstructQuery	  ::=  	'CONSTRUCT' ( ConstructTemplate DatasetClause* WhereClause SolutionModifier | DatasetClause* 'WHERE' '{' TriplesTemplate? '}' SolutionModifier )
+(s/def ::constuct-query
+  (s/keys :req-un [::construct ::where ::solution-modifier]
+          :opt-un [::data-clause]))
+
 
 
 (defn parse-query
@@ -209,15 +315,6 @@
       parsed-query)))
 
 
-
-;
-;(s/fdef defselect
-;        :args ::select)
-
-;(defn parse-filter
-;  [filter-expression]
-;  (let [filter (s/conform ::constraint filter-expression)]
-;    (if s/invalid?)))
 
 
 

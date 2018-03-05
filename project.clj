@@ -1,4 +1,4 @@
-(defproject sparqlom "0.1.0-SNAPSHOT"
+(defproject sparqlom "0.2.0-SNAPSHOT"
   :description "SPARQLom - SPARQL query builder and dsl"
   :url "https://github.com/mladvladimir/sparqlom"
   :license {:name "Eclipse Public License"

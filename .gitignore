@@ -12,3 +12,4 @@ pom.xml.asc
 dev-resources/
 sparqlom.iml
 .idea
+.cpcache
